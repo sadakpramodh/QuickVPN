@@ -8,6 +8,8 @@ import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
 
@@ -86,6 +88,20 @@ class MyVpnService : VpnService() {
     }
 
     private fun logActiveNetworkState() {
+        val hasNetworkStatePermission =
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.ACCESS_NETWORK_STATE
+            ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasNetworkStatePermission) {
+            Log.w(
+                TAG,
+                "ACCESS_NETWORK_STATE permission not granted; skipping active network diagnostics."
+            )
+            return
+        }
+
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         if (connectivityManager == null) {
             Log.w(TAG, "ConnectivityManager unavailable; cannot inspect active network state.")
