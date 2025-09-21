@@ -92,34 +92,42 @@ class MyVpnService : VpnService() {
             return
         }
 
-        val activeNetwork = connectivityManager.activeNetwork
-        if (activeNetwork == null) {
-            Log.w(TAG, "No active network detected before establishing VPN.")
-            return
+        try {
+            val activeNetwork = connectivityManager.activeNetwork
+            if (activeNetwork == null) {
+                Log.w(TAG, "No active network detected before establishing VPN.")
+                return
+            }
+
+            val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+            val transports = mutableListOf<String>()
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) transports += "WIFI"
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true) transports += "CELLULAR"
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true) transports += "ETHERNET"
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) transports += "VPN"
+
+            Log.i(
+                TAG,
+                "Active network capabilities: hasInternet=${capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)} " +
+                    "hasValidation=${capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)} transports=${if (transports.isEmpty()) "none" else transports.joinToString()}"
+            )
+
+            val linkProperties: LinkProperties? = connectivityManager.getLinkProperties(activeNetwork)
+            if (linkProperties == null) {
+                Log.w(TAG, "Link properties unavailable for active network.")
+                return
+            }
+
+            Log.d(
+                TAG,
+                "Active network link properties: interface=${linkProperties.interfaceName} dns=${linkProperties.dnsServers} routes=${linkProperties.routes}"
+            )
+        } catch (securityException: SecurityException) {
+            Log.w(
+                TAG,
+                "ACCESS_NETWORK_STATE permission unavailable; skipping active network diagnostics.",
+                securityException
+            )
         }
-
-        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        val transports = mutableListOf<String>()
-        if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) transports += "WIFI"
-        if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true) transports += "CELLULAR"
-        if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true) transports += "ETHERNET"
-        if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) transports += "VPN"
-
-        Log.i(
-            TAG,
-            "Active network capabilities: hasInternet=${capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)} " +
-                "hasValidation=${capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)} transports=${if (transports.isEmpty()) "none" else transports.joinToString()}"
-        )
-
-        val linkProperties: LinkProperties? = connectivityManager.getLinkProperties(activeNetwork)
-        if (linkProperties == null) {
-            Log.w(TAG, "Link properties unavailable for active network.")
-            return
-        }
-
-        Log.d(
-            TAG,
-            "Active network link properties: interface=${linkProperties.interfaceName} dns=${linkProperties.dnsServers} routes=${linkProperties.routes}"
-        )
     }
 }
